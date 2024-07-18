@@ -7,9 +7,10 @@ const PASSWORD = "adminadmin";
 const HOSTNAME = "54.144.149.49";
 const PORT = 1883;
 const MQTT_TOPIC = "esp32";
-const WEBSOCKET_SERVER_URL = "ws://localhost:3000/";
+const WEBSOCKET_SERVER_URL = "ws://localhost:3000";
 
 let socketIO: Socket;
+let isRoomJoined = false; 
 
 async function connect() {
   try {
@@ -32,10 +33,26 @@ async function connect() {
       if (topic === MQTT_TOPIC) {
         const parsedContent = JSON.parse(message.toString());
         console.log('Datos gasData:', parsedContent);
+
+        const userId = parsedContent.id;
+        
+        if (!isRoomJoined) {
+          socketIO.emit('joinRoom', userId);
+          isRoomJoined = true;
+        }
+        
         socketIO.emit('gasData', parsedContent);
       }
     });
-    socketIO = socketIoClient(WEBSOCKET_SERVER_URL);
+
+    socketIO = socketIoClient(WEBSOCKET_SERVER_URL, {
+      transports: ['websocket'],
+      path: '/socket.io'
+    });
+
+    socketIO.on('connect', () => {
+      console.log('Connected to WebSocket server');
+    });
 
     socketIO.on('connect_error', (err: any) => {
       console.error('WebSocket connection error:', err.message);
@@ -43,11 +60,9 @@ async function connect() {
 
     socketIO.on('disconnect', (reason: any) => {
       console.error('WebSocket disconnected:', reason);
+      isRoomJoined = false; 
     });
 
-    socketIO.on('connect', () => {
-      console.log('Connected to WebSocket server');
-    });
   } catch (err: any) {
     console.error('Error during connection setup:', err.message);
     throw new Error(err);
