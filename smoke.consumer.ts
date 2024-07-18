@@ -1,0 +1,57 @@
+import mqtt from 'mqtt';
+const socketIoClient = require('socket.io-client');
+import { Socket } from 'socket.io-client';
+
+const USERNAME = "protectify";
+const PASSWORD = "adminadmin"; 
+const HOSTNAME = "54.144.149.49";
+const PORT = 1883;
+const MQTT_TOPIC = "esp32";
+const WEBSOCKET_SERVER_URL = "ws://localhost:3000/";
+
+let socketIO: Socket;
+
+async function connect() {
+  try {
+    const client = mqtt.connect(`mqtt://${USERNAME}:${PASSWORD}@${HOSTNAME}:${PORT}`);
+
+    client.on('connect', () => {
+      console.log('Connected to MQTT broker');
+      client.subscribe(MQTT_TOPIC, (err) => {
+        if (err) {
+          console.error('Error subscribing to topic:', err.message);
+        }
+      });
+    });
+
+    client.on('error', (err) => {
+      console.error('MQTT connection error:', err.message);
+    });
+
+    client.on('message', (topic, message) => {
+      if (topic === MQTT_TOPIC) {
+        const parsedContent = JSON.parse(message.toString());
+        console.log('Datos gasData:', parsedContent);
+        socketIO.emit('gasData', parsedContent);
+      }
+    });
+    socketIO = socketIoClient(WEBSOCKET_SERVER_URL);
+
+    socketIO.on('connect_error', (err: any) => {
+      console.error('WebSocket connection error:', err.message);
+    });
+
+    socketIO.on('disconnect', (reason: any) => {
+      console.error('WebSocket disconnected:', reason);
+    });
+
+    socketIO.on('connect', () => {
+      console.log('Connected to WebSocket server');
+    });
+  } catch (err: any) {
+    console.error('Error during connection setup:', err.message);
+    throw new Error(err);
+  }
+}
+
+connect();
