@@ -1,16 +1,27 @@
 import mqtt from 'mqtt';
-const socketIoClient = require('socket.io-client');
-import { Socket } from 'socket.io-client';
+import { io, Socket } from 'socket.io-client';
 
 const USERNAME = "protectify";
 const PASSWORD = "adminadmin"; 
 const HOSTNAME = "54.144.149.49";
 const PORT = 1883;
 const MQTT_TOPIC = "esp32";
-const WEBSOCKET_SERVER_URL = "ws://localhost:3000";
+const WEBSOCKET_SERVER_URL = "http://localhost:4000"; // URL de tu servidor WebSocket
 
 let socketIO: Socket;
-let isRoomJoined = false; 
+
+async function sendDatatoWebSocket(data: any) {
+  try {
+    if (socketIO) {
+      console.log('Sending data to WebSocket:', data);
+      socketIO.emit('data', data); 
+    } else {
+      console.error('WebSocket client is not initialized');
+    }
+  } catch (error: any) {
+    console.error('Error sending data to WebSocket:', error.message);
+  }
+}
 
 async function connect() {
   try {
@@ -25,27 +36,19 @@ async function connect() {
       });
     });
 
-    client.on('error', (err) => {
-      console.error('MQTT connection error:', err.message);
-    });
-
-    client.on('message', (topic, message) => {
+    client.on('message', async (topic, message) => {
       if (topic === MQTT_TOPIC) {
-        const parsedContent = JSON.parse(message.toString());
-        console.log('Datos gasData:', parsedContent);
-
-        const userId = parsedContent.id;
-        
-        if (!isRoomJoined) {
-          socketIO.emit('joinRoom', userId);
-          isRoomJoined = true;
+        try {
+          const parsedContent = JSON.parse(message.toString());
+          console.log('Received data from MQTT:', parsedContent);
+          await sendDatatoWebSocket(parsedContent);
+        } catch (error: any) {
+          console.error('Error parsing MQTT message:', error.message);
         }
-        
-        socketIO.emit('gasData', parsedContent);
       }
     });
 
-    socketIO = socketIoClient(WEBSOCKET_SERVER_URL, {
+    socketIO = io(WEBSOCKET_SERVER_URL, {
       transports: ['websocket'],
       path: '/socket.io'
     });
@@ -58,14 +61,12 @@ async function connect() {
       console.error('WebSocket connection error:', err.message);
     });
 
-    socketIO.on('disconnect', (reason: any) => {
+    socketIO.on('disconnect', (reason) => {
       console.error('WebSocket disconnected:', reason);
-      isRoomJoined = false; 
     });
 
   } catch (err: any) {
     console.error('Error during connection setup:', err.message);
-    throw new Error(err);
   }
 }
 
