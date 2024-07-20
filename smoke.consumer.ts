@@ -6,7 +6,7 @@ const PASSWORD = "adminadmin";
 const HOSTNAME = "54.144.149.49";
 const PORT = 1883;
 const MQTT_TOPIC = "esp32";
-const WEBSOCKET_SERVER_URL = "http://localhost:4000"; // URL de tu servidor WebSocket
+const WEBSOCKET_SERVER_URL = "http://localhost:4000";
 
 let socketIO: Socket;
 
