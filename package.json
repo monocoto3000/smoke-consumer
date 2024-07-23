@@ -16,6 +16,8 @@
         "amqplib": "^0.10.0"
     },
     "scripts": {
-        "dev": "tsnd --respawn ./smoke.consumer.ts"
+        "dev": "tsnd --respawn ./smoke.consumer.ts",
+        "start": "node ./smoke.consumer.js",
+        "build":"tsc"
     }
 }
